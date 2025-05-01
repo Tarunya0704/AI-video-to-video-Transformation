@@ -2,37 +2,28 @@
 
 import { VideoFile, TransformationHistory } from "@/types";
 
-// Simulated API functions for frontend use
-
 export async function uploadVideo(file: File): Promise<VideoFile> {
-  // In a real app, this would upload the file using Uploadcare,
-  // then call our API to store in Cloudinary
-  
-  // For demo purposes, we'll simulate the upload
   const formData = new FormData();
   formData.append("file", file);
   
   try {
-    // In a real app, you'd make this API call
-    // const response = await fetch("/api/upload", {
-    //   method: "POST",
-    //   body: formData,
-    // });
-    // const data = await response.json();
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
     
-    // For demo, create a simulated response
-    const simulatedResponse = {
-      success: true,
-      url: URL.createObjectURL(file),
-      uploadId: `upload_${Date.now()}`,
-    };
+    if (!response.ok) {
+      throw new Error("Upload failed");
+    }
+    
+    const data = await response.json();
     
     return {
       name: file.name,
       size: file.size,
       type: file.type,
-      url: simulatedResponse.url,
-      uploadId: simulatedResponse.uploadId,
+      url: data.url,
+      uploadId: data.uploadId,
     };
   } catch (error) {
     console.error("Upload error:", error);
@@ -41,36 +32,28 @@ export async function uploadVideo(file: File): Promise<VideoFile> {
 }
 
 export async function transformVideo(video: VideoFile, params: any): Promise<any> {
-  // In a real app, this would call our API to initiate the transformation
-  
   try {
-    // In a real app, you'd make this API call
-    // const response = await fetch("/api/transform", {
-    //   method: "POST",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //   },
-    //   body: JSON.stringify({
-    //     videoUrl: video.url,
-    //     params,
-    //   }),
-    // });
-    // const data = await response.json();
-    
-    // For demo, simulate processing delay and success
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Simulate a successful transformation response
-    const simulatedResponse = {
-      success: true,
-      id: `trans_${Date.now()}`,
-      resultUrl: video.url, // In a real app, this would be a different URL
-    };
+    const response = await fetch("/api/transform", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        videoUrl: video.url,
+        params,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Transformation failed");
+    }
+
+    const data = await response.json();
     
     return {
       status: "success",
-      id: simulatedResponse.id,
-      resultUrl: simulatedResponse.resultUrl,
+      id: data.id,
+      resultUrl: data.resultUrl || video.url,
     };
   } catch (error) {
     console.error("Transformation error:", error);
@@ -79,36 +62,15 @@ export async function transformVideo(video: VideoFile, params: any): Promise<any
 }
 
 export async function fetchHistory(): Promise<TransformationHistory[]> {
-  // In a real app, this would fetch from our API
-  
   try {
-    // In a real app, you'd make this API call
-    // const response = await fetch("/api/history");
-    // const data = await response.json();
+    const response = await fetch("/api/history");
     
-    // For demo, create simulated history data
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    if (!response.ok) {
+      throw new Error("Failed to fetch history");
+    }
     
-    const styles = ["cinematic", "anime", "3d_animation", "watercolor", "pixel_art"];
-    
-    // Generate 5 sample history items
-    const simulatedHistory = Array.from({ length: 5 }, (_, i) => ({
-      id: `trans_${Date.now() - i * 100000}`,
-      sourceVideoUrl: `https://res.cloudinary.com/demo/video/upload/v1/sample_video_${i + 1}.mp4`,
-      sourceVideoName: `sample_video_${i + 1}.mp4`,
-      resultUrl: "https://samplelib.com/lib/preview/mp4/sample-5s.mp4",
-      params: {
-        style: styles[i % styles.length],
-        intensity: 70 + (i * 5) % 30,
-        enhanceQuality: i % 2 === 0,
-        stabilize: i % 3 === 0,
-        duration: 15,
-      },
-      createdAt: new Date(Date.now() - i * 3600000).toISOString(),
-      completedAt: new Date(Date.now() - i * 3600000 + 300000).toISOString(),
-    }));
-    
-    return simulatedHistory;
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error("History fetch error:", error);
     throw new Error("Failed to fetch transformation history");

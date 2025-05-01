@@ -1,21 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/mongodb";
 
-// This route fetches transformation history
 export async function GET(req: NextRequest) {
   try {
     const { db } = await createClient();
     const transformations = db.collection("transformations");
     
-    // In a real app, you would filter by user ID
-    // For this example, we'll return all transformations
     const history = await transformations
       .find({ status: "completed" })
       .sort({ completedAt: -1 })
       .limit(10)
       .toArray();
     
-    // Map the results to match the expected format
     const formattedHistory = history.map(item => ({
       id: item.id,
       sourceVideoUrl: item.sourceVideoUrl,

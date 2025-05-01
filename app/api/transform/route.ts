@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/mongodb";
 import { callFaiApi } from "@/lib/fai-api";
+import { v2 as cloudinary } from 'cloudinary';
 
-// This route handles initiating video transformations
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 export async function POST(req: NextRequest) {
   try {
     const { videoUrl, params } = await req.json();
@@ -14,7 +21,6 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // Validate parameters
     if (!params.style) {
       return NextResponse.json(
         { error: "Transformation style is required" },
@@ -22,14 +28,15 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // In a real implementation, this would call the Fai API
-    // For this example, we'll simulate the API call
     const transformationId = `trans_${Date.now()}`;
     const webhookUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/webhook`;
     
-    // Simulate API call to Fai with Hunyuan-Video Model
-    const faiResponse = await callFaiApi(videoUrl, params, webhookUrl);
-    
+    // Upload to Cloudinary
+    const uploadResponse = await cloudinary.uploader.upload(videoUrl, {
+      resource_type: "video",
+      public_id: transformationId,
+    });
+
     // Store transformation request in MongoDB
     const { db } = await createClient();
     const transformations = db.collection("transformations");
@@ -37,16 +44,31 @@ export async function POST(req: NextRequest) {
     await transformations.insertOne({
       id: transformationId,
       sourceVideoUrl: videoUrl,
+      sourceVideoName: params.sourceVideoName || "Untitled",
       params,
       status: "processing",
       createdAt: new Date(),
+      cloudinaryUrl: uploadResponse.secure_url,
     });
     
-    // For demo, simulate a successful response right away
+    // For demo, simulate a successful response
+    // In production, this would be handled by the webhook
+    await transformations.updateOne(
+      { id: transformationId },
+      {
+        $set: {
+          status: "completed",
+          resultUrl: uploadResponse.secure_url,
+          completedAt: new Date(),
+        }
+      }
+    );
+    
     return NextResponse.json({
       success: true,
       id: transformationId,
       status: "processing",
+      resultUrl: uploadResponse.secure_url,
     });
     
   } catch (error) {
